@@ -2,8 +2,8 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"lease/pb"
+	"lease/utils"
 	"log"
 	"net"
 	"time"
@@ -15,12 +15,18 @@ type CenterNodeServer struct {
 	pb.UnimplementedCenterNodeServer
 
 	needWrite    bool
-	writeChannel chan struct {
-		key   string
-		value string
+	writeChannel chan utils.Item
+	data         map[string]string
+	maxOutTime   int64
+}
+
+func NewCenterNodeServer() *CenterNodeServer {
+	return &CenterNodeServer{
+		data:         make(map[string]string),
+		writeChannel: make(chan utils.Item, 10000),
+		needWrite:    false,
+		maxOutTime:   0,
 	}
-	data       map[string]string
-	maxOutTime int64
 }
 
 func (s *CenterNodeServer) RequestData(ctx context.Context, req *pb.RequestDataRequest) (*pb.RequestDataResponse, error) {
@@ -40,9 +46,14 @@ func (s *CenterNodeServer) RequestData(ctx context.Context, req *pb.RequestDataR
 	return response, nil
 }
 
-func (s *CenterNodeServer) Write(key, value string) {
+func (s *CenterNodeServer) WriteData(ctx context.Context, req *pb.WriteDataRequest) (*pb.WriteDataResponse, error) {
 
-	s.writeChannel <- struct{ key, value string }{key, value}
+	key, value := req.GetKey(), req.GetValue()
+
+	s.writeChannel <- utils.Item{
+		Key:   key,
+		Value: value,
+	}
 
 	if !s.needWrite {
 		{
@@ -55,7 +66,7 @@ func (s *CenterNodeServer) Write(key, value string) {
 					if s.maxOutTime < time.Now().Unix() {
 
 						for data := range s.writeChannel {
-							s.data[data.key] = data.data
+							s.data[data.Key] = data.Value
 						}
 						s.needWrite = false
 						break
@@ -64,12 +75,13 @@ func (s *CenterNodeServer) Write(key, value string) {
 			}()
 		}
 	}
+	return &pb.WriteDataResponse{State: 1}, nil
 }
 
 func main() {
 	server := grpc.NewServer()
 
-	centerServer := &CenterNodeServer{}
+	centerServer := NewCenterNodeServer()
 
 	pb.RegisterCenterNodeServer(server, centerServer)
 
@@ -83,12 +95,4 @@ func main() {
 		log.Fatalf("Failed to serve: %v", err)
 	}
 
-	for {
-		key := ""
-		value := ""
-		log.Println("Please input kv")
-		fmt.Scan(&key)
-		fmt.Scan(&value)
-		centerServer.Write(key, value)
-	}
 }

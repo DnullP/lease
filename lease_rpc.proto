@@ -10,6 +10,16 @@ service CacheNode {
 service CenterNode {
   // 请求数据，返回数据和租约时间
   rpc RequestData(RequestDataRequest) returns (RequestDataResponse);
+  rpc WriteData(WriteDataRequest) returns (WriteDataResponse);
+}
+
+message WriteDataRequest {
+  string key = 1;
+  string value = 2;
+}
+
+message WriteDataResponse {
+  int32 state = 1;
 }
 
 message OutdateDataRequest {

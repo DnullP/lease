@@ -124,6 +124,7 @@ var CacheNode_ServiceDesc = grpc.ServiceDesc{
 
 const (
 	CenterNode_RequestData_FullMethodName = "/CenterNode/RequestData"
+	CenterNode_WriteData_FullMethodName   = "/CenterNode/WriteData"
 )
 
 // CenterNodeClient is the client API for CenterNode service.
@@ -132,6 +133,7 @@ const (
 type CenterNodeClient interface {
 	// 请求数据，返回数据和租约时间
 	RequestData(ctx context.Context, in *RequestDataRequest, opts ...grpc.CallOption) (*RequestDataResponse, error)
+	WriteData(ctx context.Context, in *WriteDataRequest, opts ...grpc.CallOption) (*WriteDataResponse, error)
 }
 
 type centerNodeClient struct {
@@ -152,12 +154,23 @@ func (c *centerNodeClient) RequestData(ctx context.Context, in *RequestDataReque
 	return out, nil
 }
 
+func (c *centerNodeClient) WriteData(ctx context.Context, in *WriteDataRequest, opts ...grpc.CallOption) (*WriteDataResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(WriteDataResponse)
+	err := c.cc.Invoke(ctx, CenterNode_WriteData_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // CenterNodeServer is the server API for CenterNode service.
 // All implementations must embed UnimplementedCenterNodeServer
 // for forward compatibility.
 type CenterNodeServer interface {
 	// 请求数据，返回数据和租约时间
 	RequestData(context.Context, *RequestDataRequest) (*RequestDataResponse, error)
+	WriteData(context.Context, *WriteDataRequest) (*WriteDataResponse, error)
 	mustEmbedUnimplementedCenterNodeServer()
 }
 
@@ -170,6 +183,9 @@ type UnimplementedCenterNodeServer struct{}
 
 func (UnimplementedCenterNodeServer) RequestData(context.Context, *RequestDataRequest) (*RequestDataResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RequestData not implemented")
+}
+func (UnimplementedCenterNodeServer) WriteData(context.Context, *WriteDataRequest) (*WriteDataResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method WriteData not implemented")
 }
 func (UnimplementedCenterNodeServer) mustEmbedUnimplementedCenterNodeServer() {}
 func (UnimplementedCenterNodeServer) testEmbeddedByValue()                    {}
@@ -210,6 +226,24 @@ func _CenterNode_RequestData_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CenterNode_WriteData_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(WriteDataRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CenterNodeServer).WriteData(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CenterNode_WriteData_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CenterNodeServer).WriteData(ctx, req.(*WriteDataRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // CenterNode_ServiceDesc is the grpc.ServiceDesc for CenterNode service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -220,6 +254,10 @@ var CenterNode_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RequestData",
 			Handler:    _CenterNode_RequestData_Handler,
+		},
+		{
+			MethodName: "WriteData",
+			Handler:    _CenterNode_WriteData_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
