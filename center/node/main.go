@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"lease/pb"
 	"lease/utils"
 	"log"
@@ -17,7 +18,8 @@ type CenterNodeServer struct {
 	needWrite    bool
 	writeChannel chan utils.Item
 	data         map[string]string
-	maxOutTime   int64
+	maxOutTime   int64 
+	// TODO maxOutTime need to align to every data
 }
 
 func NewCenterNodeServer() *CenterNodeServer {
@@ -46,6 +48,7 @@ func (s *CenterNodeServer) RequestData(ctx context.Context, req *pb.RequestDataR
 	return response, nil
 }
 
+// TODO: need to use outdate to try to delete the data
 func (s *CenterNodeServer) WriteData(ctx context.Context, req *pb.WriteDataRequest) (*pb.WriteDataResponse, error) {
 
 	key, value := req.GetKey(), req.GetValue()
@@ -67,6 +70,7 @@ func (s *CenterNodeServer) WriteData(ctx context.Context, req *pb.WriteDataReque
 
 						for data := range s.writeChannel {
 							s.data[data.Key] = data.Value
+							fmt.Println("write data: ", data.Key, data.Value)
 						}
 						s.needWrite = false
 						break

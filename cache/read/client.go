@@ -10,31 +10,28 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-var (
-	addr = flag.String("addr", "localhost:50051", "center node address")
-)
-
 func main() {
+	addr := flag.String("addr", "localhost:50052", "center node address")
 	conn, err := grpc.NewClient(*addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		panic(err)
 	}
 	defer conn.Close()
-	client := pb.NewCenterNodeClient(conn)
+	client := pb.NewCacheNodeClient(conn)
 
-	var key string
-	var value string
 	for {
+		var key string
 		fmt.Scanln(&key)
-		fmt.Scanln(&value)
-
-		req := pb.WriteDataRequest{Key: key, Value: value}
+		req := pb.ReadDataRequest{DataName: key}
 		ctx := context.Background()
-		respose, err := client.WriteData(ctx, &req)
+		response, err := client.ReadData(ctx, &req)
 		if err != nil {
 			panic(err)
 		}
-		fmt.Println(respose.GetState())
+		if response.GetData() == "" {
+			fmt.Println("No data")
+			continue
+		}
+		fmt.Println(response.GetData())
 	}
-
 }

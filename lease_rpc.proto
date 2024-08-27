@@ -5,6 +5,7 @@ option go_package = "./pb";
 service CacheNode {
   // 请求数据，如果缓存中没有数据或租约过期，则从中心节点请求数据
   rpc OutdateData(OutdateDataRequest) returns (OutdateDataResponse);
+  rpc ReadData(ReadDataRequest) returns (ReadDataResponse);
 }
 
 service CenterNode {
@@ -38,3 +39,10 @@ message OutdateDataResponse {
   bool success = 1;
 }
 
+message ReadDataRequest {
+  string data_name = 1;
+}
+
+message ReadDataResponse {
+  string data = 1;
+}
