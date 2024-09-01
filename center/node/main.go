@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"lease/pb"
 	"lease/utils"
@@ -18,7 +19,7 @@ type CenterNodeServer struct {
 	needWrite    bool
 	writeChannel chan utils.Item
 	data         map[string]string
-	maxOutTime   int64 
+	maxOutTime   int64
 	// TODO maxOutTime need to align to every data
 }
 
@@ -45,6 +46,7 @@ func (s *CenterNodeServer) RequestData(ctx context.Context, req *pb.RequestDataR
 		Data:  s.data[req.GetDataName()],
 		Lease: outTime,
 	}
+	log.Println("Lease: ", outTime)
 	return response, nil
 }
 
@@ -59,25 +61,26 @@ func (s *CenterNodeServer) WriteData(ctx context.Context, req *pb.WriteDataReque
 	}
 
 	if !s.needWrite {
-		{
-			s.needWrite = true
+		s.needWrite = true
+		go func() {
+		LOOP:
+			for {
+				time.Sleep(100 * time.Millisecond)
+				if s.maxOutTime < time.Now().Unix() {
 
-			go func() {
-				for {
-					time.Sleep(100 * time.Millisecond)
-
-					if s.maxOutTime < time.Now().Unix() {
-
-						for data := range s.writeChannel {
+					for {
+						select {
+						case data := <-s.writeChannel:
 							s.data[data.Key] = data.Value
 							fmt.Println("write data: ", data.Key, data.Value)
+						default:
+							s.needWrite = false
+							break LOOP
 						}
-						s.needWrite = false
-						break
 					}
 				}
-			}()
-		}
+			}
+		}()
 	}
 	return &pb.WriteDataResponse{State: 1}, nil
 }
@@ -89,12 +92,16 @@ func main() {
 
 	pb.RegisterCenterNodeServer(server, centerServer)
 
-	lis, err := net.Listen("tcp", ":50051")
+	var port int
+	flag.IntVar(&port, "port", 50051, "The server port")
+	flag.Parse()
+
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
 		log.Fatalf("Failed to listen: %v", err)
 	}
 
-	log.Println("gRPC server is running on port 50051")
+	log.Println("gRPC server is running on port: ", port)
 	if err := server.Serve(lis); err != nil {
 		log.Fatalf("Failed to serve: %v", err)
 	}

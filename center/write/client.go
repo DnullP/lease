@@ -10,11 +10,13 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-var (
-	addr = flag.String("addr", "localhost:50051", "center node address")
-)
-
 func main() {
+	var address string
+	flag.StringVar(&address, "address", "localhost:50051", "address of the server")
+	flag.Parse()
+
+	var addr = flag.String("addr", address, "the address to connect to")
+
 	conn, err := grpc.NewClient(*addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		panic(err)

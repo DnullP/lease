@@ -27,8 +27,8 @@ type CacheNodeServer struct {
 	conn *grpc.ClientConn
 }
 
-func NewCacheNodeServer() *CacheNodeServer {
-	addr := flag.String("addr", "localhost:50051", "the address to connect to")
+func NewCacheNodeServer(ip string) *CacheNodeServer {
+	addr := flag.String("addr", ip+":50051", "the address to connect to")
 	conn, err := grpc.NewClient(*addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatalf("Failed to connect: %v", err)
@@ -66,8 +66,14 @@ func (s *CacheNodeServer) ReadData(ctx context.Context, req *pb.ReadDataRequest)
 			log.Println("Failed to request data: %v", err)
 			return "No data"
 		}
+		log.Println("No data in cache, request from center: ", response.GetData())
+		log.Println("Lease: ", response.GetLease())
 		newData := response.GetData()
 		newDDL := response.GetLease()
+		s.data[dataName] = DatawithDDL{
+			data: newData,
+			ddl:  newDDL,
+		}
 		s.data[dataName] = DatawithDDL{
 			data: newData,
 			ddl:  newDDL,
@@ -89,6 +95,8 @@ func (s *CacheNodeServer) ReadData(ctx context.Context, req *pb.ReadDataRequest)
 		}, nil
 	}
 
+	log.Println("Read data from cache: ", data.data)
+
 	return &pb.ReadDataResponse{
 		Data: data.data,
 	}, nil
@@ -98,8 +106,12 @@ func main() {
 	// Create a new gRPC server
 	grpcServer := grpc.NewServer()
 
+	var centerIP string
+	flag.StringVar(&centerIP, "centerIP", "localhost", "address of the center server")
+	flag.Parse()
+
 	// Register CacheNode and CenterNode services
-	pb.RegisterCacheNodeServer(grpcServer, NewCacheNodeServer())
+	pb.RegisterCacheNodeServer(grpcServer, NewCacheNodeServer(centerIP))
 
 	// Listen on a port
 	lis, err := net.Listen("tcp", ":50052")

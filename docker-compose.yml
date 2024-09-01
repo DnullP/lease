@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  cache_server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: myapp:latest
+    command: /app/cache_server --centerIP center_server
+    container_name: cache_server
+    networks:
+      - mynetwork
+    environment:
+      CENTER_HOST: center_server  # 使用服务名称 center
+    ports:
+      - "50052:50052"
+
+  center_server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: myapp:latest
+    command: /app/center_server
+    container_name: center_server
+    networks:
+      - mynetwork
+    ports:
+      - "50051:50051"
+
+networks:
+  mynetwork:
+    driver: bridge
